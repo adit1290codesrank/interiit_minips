@@ -22,6 +22,8 @@ interiit_minips/
 │       ├── finetune_and_latency.md
 │       └── partD_partE_tooling.md
 │   └── Sarvam mini PS final audit/             ← the six audit notes behind the audit report
+├── tools/
+│   └── list_cited_sources.py                   ← lists every link a markdown report cites (for the appendix)
 └── prototypes/
     ├── hindi_number_parser_prototype.py        ← Hindi number-word parser (basis for the Part D checker)
     ├── test_hindi_number_parser.py             ← its tests (59 phrases)

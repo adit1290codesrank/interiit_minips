@@ -1,5 +1,7 @@
 # Fix the framing; the engineering already holds
 
+> **Status: all 17 checklist items have been applied to the master report** ("Hold the commitment, not the sentence"). Line numbers below refer to the master report *before* those fixes, and quotes of the old title and wording are kept as the record of what was wrong.
+
 The Sarvam mini PS study material is built on the right technology for October 2026, and most of it is feasible, but it needs fixes before the interview. The stack is a Hibiki-family streaming target, training data that teaches the model when to speak, MMS_FA alignment, wait-k analysis and Bulbul v3 targets, and no newer open system replaces it. The plan is feasible within the PS budgets: Modal needs about $150–300 before the mid-term and $370–540 after it, and Sarvam credit about $690 of $1,000. The real time constraint is Bulbul's rate limit, not GPU-hours. All the arithmetic in the report recomputes exactly. Where the report fails is consistency and coverage:
 
 - **Title and opening example.** The title and the opening example contradict the report's own A5 anticipation analysis and its B3 placement rule.
