@@ -43,6 +43,7 @@ MULT = {N(k): v for k, v in {"सौ": 100, "हज़ार": 1000, "हजा�
 CAN_START = {N("सौ"), N("हज़ार"), N("हजार")}            # "हज़ार रुपये" = 1000
 FRAC = {N("साढ़े"): 0.5, N("सवा"): 0.25, N("पौने"): -0.25}  # prefixes: साढ़े X = X + 0.5
 SPEC = {N("डेढ़"): 1.5, N("ढाई"): 2.5}
+DECIMAL = N("दशमलव")                                 # "दो दशमलव पाँच" = 2.5
 OCLOCK = {N("बजे"), N("बज")}
 OCLOCK_AND = N("बजकर")
 MINUTE = {N("मिनट")}
@@ -119,6 +120,16 @@ def read_amount(toks, i):
             if prev == "num":
                 break
             grp, prev = grp + SPEC[t], "num"
+        elif t == DECIMAL and prev == "num":
+            k = i + 1
+            while k < len(toks) and num(toks[k]) is not None and num(toks[k]) < 10:
+                k += 1
+            digits = "".join(str(num(w)) for w in toks[i + 1:k])
+            if not digits:
+                break
+            grp += int(digits) / 10 ** len(digits)
+            i = k
+            continue
         elif num(t) is not None:
             if prev == "num":
                 break                               # two numbers in a row: not one amount

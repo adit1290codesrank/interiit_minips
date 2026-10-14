@@ -10,7 +10,8 @@ interiit_minips/
 ├── Sarvam.pdf                                  ← main problem statement (the full competition task)
 ├── Inter IIT Tech Meet 15.0_ Sarvam.ai Mini PS.pdf  ← mini PS (selection task, Parts A–E)
 ├── reports/
-│   └── Sarvam mini PS research.md              ← START HERE: the master report
+│   ├── Sarvam mini PS research.md              ← START HERE: the master report
+│   └── Sarvam mini PS final audit.md           ← audit of the master report: verdicts, critique check, fix checklist
 ├── research_notes/
 │   └── Sarvam mini PS research/                ← the seven research notes behind the report
 │       ├── partA_simultaneous_fundamentals.md
@@ -20,9 +21,10 @@ interiit_minips/
 │       ├── transcription_alignment_realgap.md
 │       ├── finetune_and_latency.md
 │       └── partD_partE_tooling.md
+│   └── Sarvam mini PS final audit/             ← the six audit notes behind the audit report
 └── prototypes/
     ├── hindi_number_parser_prototype.py        ← Hindi number-word parser (basis for the Part D checker)
-    ├── test_hindi_number_parser.py             ← its tests (57 phrases)
+    ├── test_hindi_number_parser.py             ← its tests (59 phrases)
     └── data/                                   ← NeMo's Hindi 0–99 number tables + NEMO_LICENSE (Apache-2.0)
 ```
 
@@ -100,7 +102,7 @@ python prototypes/test_hindi_number_parser.py                                   
 ## Status and caveats
 
 - **Unchecked paper numbers.** The network proxy blocked arXiv, Hugging Face and Sarvam's docs during research. Most paper figures came from search results and are tagged **[S: re-check]** in the report. Re-check any you put in the submission, since you'll be cross-questioned.
-- **Number parser (fixed).** The first draft had seven bugs, and a later 65-phrase audit found more (e.g. "पाँच सौ करोड़" read as 500). All are fixed and covered by 57 test phrases. For example, it turned "दो तीन लाख" (two to three lakh) into 500,000 and "साढ़े चार बजे" (4:30) into 4, and crashed on "डबल बेड". Remaining limits, such as dates coming out as plain amounts, are listed in report §D6.
+- **Number parser (fixed).** The first draft had seven bugs, and a later 65-phrase audit found more (e.g. "पाँच सौ करोड़" read as 500). All are fixed and covered by 59 test phrases. For example, it turned "दो तीन लाख" (two to three lakh) into 500,000 and "साढ़े चार बजे" (4:30) into 4, and crashed on "डबल बेड". Remaining limits, such as dates coming out as plain amounts, are listed in report §D6.
 - **Untested code.** The alignment and other Part D/E scripts in the report are sketches. Torch wasn't installed in the research environment, so they haven't been run. The echo-server sketch (E-Dev) was run against a test client and behaved correctly. The wait-k numbers and simulator were checked by running them.
 
 ## Next step
