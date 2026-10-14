@@ -4,6 +4,19 @@ The Sarvam task rewards a translator that knows when *not* to speak. Of the 70 f
 
 > **How to read the evidence tags.** The research proxy blocked arXiv, Hugging Face and the ACL Anthology, so claims carry one of three tags. **[V]** means checked against primary code, a README, a downloaded wheel or the two PS PDFs. **[L]** means tested locally in the research sandbox. **[S: re-check]** means the claim rests on a search-engine extract or secondary summary of a paper; the URL is the primary page, but the number must be re-checked against the PDF before you quote it in an interview. Paper equations marked [S] were reconstructed from extracts and memory.
 
+> **Status and caveats: read before relying on this report.**
+>
+> - **Unchecked paper numbers.** The network proxy blocked arXiv, Hugging Face and Sarvam's docs during research. Most paper figures came from search results and are tagged **[S: re-check]**. Re-check any you put in the submission, since you'll be cross-questioned.
+> - **Number parser.** The prototype in `prototypes/hindi_number_parser_prototype.py` is a rough draft with four known bugs:
+>   - "दो तीन लाख" (two to three lakh) returns 500,000.
+>   - "साढ़े चार बजे" (4:30) returns 4.
+>   - "एक एक" becomes the digit string 11, though it can mean "one each".
+>   - Amounts come back as floats.
+>
+>   The Part D plan (§D6) lists the fixes. The prototype also needs NeMo's Hindi number tables to run. They weren't installed in the research environment, so it was tested on stand-in tables.
+> - **Untested code.** The alignment and other Part D/E scripts in this report are sketches. Torch wasn't installed in the research environment, so they haven't been run. The echo-server sketch (E-Dev) was run against a test client and behaved correctly. The wait-k numbers and simulator were checked by running them.
+> - **Next step: Part D.** Record your 6 clips (§D1). Once they're in the repo (`clips/raw/`), the alignment, the entity checker and the wait-k simulator can be built on them.
+
 ---
 
 ## Part A — The problem: 36 of 70 points ride on not speaking too early
