@@ -259,7 +259,7 @@ AL averages, over target words up to the cut-off τ (the first word written afte
 
 **Other metrics on the same schedule** (all computed by script):
 - **LAAL**: max(|hyp|, |ref|) = 8, so LAAL = 2.625, the same as AL.
-- **DAL**: g′ = g for t ≤ 7; at t = 8, g′ = max(9, 9 + 9/8) = 10.125. DAL = 3.0.
+- **DAL**: because DAL forces a spacing of at least 1/γ = 9/8 source words between consecutive target words, g′_t = max(g_t, g′_{t−1} + 9/8) = 3 + (t−1)·9/8. That gives 3, 4.125, 5.25, 6.375, 7.5, 8.625, 9.75, 10.875, so every term g′_t − (t−1)·9/8 = 3 and DAL = 3.0. DAL does not "credit" wait-k for |y| < |x| the way AL does.
 - **AP** = 51/(9·8) = 17/24 ≈ 0.708.
 - **Over-generation illustration**: a 10-word hypothesis with wait-3 delays gives AL (reference length 8) = 2.625, but LAAL = 3.3, because the ideal rate becomes 10/9.
 
