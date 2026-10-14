@@ -7,7 +7,7 @@ The Sarvam task rewards a translator that knows when *not* to speak. Of the 70 f
 > **Status and caveats: read before relying on this report.**
 >
 > - **Unchecked paper numbers.** The network proxy blocked arXiv, Hugging Face and Sarvam's docs during research. Most paper figures came from search results and are tagged **[S: re-check]**. Re-check any you put in the submission, since you'll be cross-questioned.
-> - **Number parser (fixed).** `prototypes/hindi_number_parser_prototype.py` has been rewritten. The first draft summed short digit runs ("दो तीन लाख" → 500,000; "नौ आठ लोग" → 17), dropped fractions without a multiplier ("साढ़े चार बजे" → 4; "पौने दो" → 2), turned "एक एक" into "11", returned floats, ignored "ट्रिपल", crashed on "डबल" before a non-digit ("डबल बेड"), and could not be imported without a command-line argument. The new version emits typed RANGE, TIME and AMBIG results for these, returns whole amounts as integers, vendors NeMo's Hindi number tables (Apache-2.0) in `prototypes/data/`, and passes 37 test phrases plus 4 unit tests (`python prototypes/test_hindi_number_parser.py`). Remaining limits are listed in §D6.
+> - **Number parser (fixed).** `prototypes/hindi_number_parser_prototype.py` has been rewritten. The first draft summed short digit runs ("दो तीन लाख" → 500,000; "नौ आठ लोग" → 17), dropped fractions without a multiplier ("साढ़े चार बजे" → 4; "पौने दो" → 2), turned "एक एक" into "11", returned floats, ignored "ट्रिपल", crashed on "डबल" before a non-digit ("डबल बेड"), and could not be imported without a command-line argument. The new version emits typed RANGE, TIME and AMBIG results for these, returns whole amounts as integers, vendors NeMo's Hindi number tables (Apache-2.0) in `prototypes/data/`, and passes 57 test phrases plus 4 unit tests (`python prototypes/test_hindi_number_parser.py`). A later adversarial audit (65 new phrases) found a second round of bugs, such as "पाँच सौ करोड़" coming out as 500, "सवा लाख" being missed and "वन" (forest) being read as 1. These are fixed and added to the tests. Remaining limits are listed in §D6.
 > - **Untested code.** The alignment and other Part D/E scripts in this report are sketches. Torch wasn't installed in the research environment, so they haven't been run. The echo-server sketch (E-Dev) was run against a test client and behaved correctly. The wait-k numbers and simulator were checked by running them.
 > - **Next step: Part D.** Record your 6 clips (§D1). Once they're in the repo (`clips/raw/`), the alignment, the entity checker and the wait-k simulator can be built on them.
 
@@ -369,7 +369,7 @@ mini_ps/
 ├── checker/gold/clipNN.json     # hand-labelled entities, negations, repairs
 ├── checker/eval_checker.py      # confusion matrix per entity type
 ├── manifest/{build_manifest,validate}.py    # §5.2 JSONL for the 6 clips (shows Part A understanding)
-├── tests/test_numbers.py        # unit tests incl. the 12 prototype phrases + known hard cases
+├── tests/test_numbers.py        # unit tests: the 57 parser phrases + checker cases
 ├── partE_ml/{wait_k_sim,prefix_translate,plot}.py
 └── run_clip.py                  # one command for the interview: new clip -> all outputs
 ```
@@ -448,7 +448,7 @@ Start from `prototypes/hindi_number_parser_prototype.py`. It loads NeMo 1.2.0's 
 | TIME | a number before बजे, or बजकर … मिनट: साढ़े चार बजे · पौने पाँच बजे · चार बजकर बीस मिनट | "4:30" · "4:45" · "4:20" |
 | AMBIG | two bare numbers, equal or falling: एक एक · नौ आठ | (1, 1) · (9, 8), for the checker to resolve from context |
 
-A multiplier that is not smaller than the previous one starts a new amount, so "पाँच लाख… नहीं नहीं, पाँच करोड़" gives two amounts, 500000 then 50000000. `prototypes/test_hindi_number_parser.py` covers 37 phrases: the first draft's 12, every bug found in it, and edge cases such as "डबल बेड चाहिए" (no number, and no crash) [L]. The first draft's bugs and how each was fixed:
+A multiplier that is not smaller than the previous one starts a new amount, so "पाँच लाख… नहीं नहीं, पाँच करोड़" gives two amounts, 500000 then 50000000. Directly after another multiplier, a larger one scales the whole amount ("पाँच सौ करोड़" = 500 crore, "एक हज़ार करोड़" = 1000 crore), a repeated one is distributive ("सौ सौ रुपये", "दो दो सौ रुपये" = 100 / 200 each), and a fraction prefix before a multiplier means one-and-a-fraction ("सवा लाख" = 125000, "पौने सौ" = 75). Runs made only of English digit words shorter than four digits are ignored when they contain a homograph (वन = forest, टू = to, एट = at, फोर = for), so "वन टू वन मीटिंग" is not a number but "नाइन एट सेवन सिक्स" is. `prototypes/test_hindi_number_parser.py` covers 57 phrases: the first draft's 12, every bug found in it and in a later 65-phrase adversarial audit, and edge cases such as "डबल बेड चाहिए" (no number, and no crash) [L]. The first draft's bugs and how each was fixed:
 - **Short digit runs were summed** ("दो तीन लाख" → 500,000; "नौ आठ लोग" → 17). They are now RANGE or AMBIG.
 - **Fractions were dropped without a multiplier** ("साढ़े चार बजे" → 4; "पौने दो" → 2). Fractions now apply to the next number, and बजे gives TIME.
 - **"एक एक" became the digit string 11.** It is now AMBIG.
@@ -457,11 +457,14 @@ A multiplier that is not smaller than the previous one starts a new amount, so "
 - **"डबल" before a non-digit crashed** with `ValueError`.
 - **It needed a command-line argument even to import.** It now has argparse and lazy table loading.
 
+The adversarial audit of the rewrite found and fixed: units stacked after सौ/हज़ार ("पाँच सौ करोड़" → 500, off by 10⁷), सवा/पौने before a multiplier ("सवा सौ" → 100), "करोड" spelled without the nukta, quotes and brackets hiding numbers, वन/टू homographs read as digits, "पौने एक बजे" → 0:45 instead of 12:45, and distributive reduplication.
+
 Known limits to list in RESULTS.md:
 - Dates come out as plain amounts ("पंद्रह अगस्त" → 15), so date detection belongs in the checker.
 - Ordinals (पहला), approximate plurals (हज़ारों, लाखों), "आधा" and decimals (दशमलव) are not handled.
 - Three or more small numbers are always read as digits, so "दस बारह पंद्रह" → "101215".
 - A phone number read with a pause in the middle splits into two DIG groups, which the checker must join.
+- Latin-script number words ("zero nine") are ignored, since Level-1 transcripts write English in Devanagari; a lone "ज़ीरो" is read as the amount 0.
 
 Repair logic goes on top: when two amounts of the same type are separated by an editing term within a few words, the last is `corrected` and the first `abandoned`.
 

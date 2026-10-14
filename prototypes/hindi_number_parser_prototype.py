@@ -36,9 +36,10 @@ def N(s):
 DEV_DIGITS = str.maketrans("०१२३४५६७८९", "0123456789")
 EN = {N(k): v for k, v in {"ज़ीरो": 0, "जीरो": 0, "वन": 1, "टू": 2, "थ्री": 3, "फोर": 4, "फ़ोर": 4,
                            "फाइव": 5, "सिक्स": 6, "सेवन": 7, "एट": 8, "नाइन": 9}.items()}
+HOMOGRAPH = {N(w) for w in ("वन", "टू", "एट", "फोर", "फ़ोर")}  # also "forest", "to", "at", "for"
 REPEAT = {N("डबल"): 2, N("ट्रिपल"): 3}
 MULT = {N(k): v for k, v in {"सौ": 100, "हज़ार": 1000, "हजार": 1000, "लाख": 10**5,
-                             "करोड़": 10**7, "अरब": 10**9}.items()}
+                             "करोड़": 10**7, "करोड": 10**7, "अरब": 10**9}.items()}
 CAN_START = {N("सौ"), N("हज़ार"), N("हजार")}            # "हज़ार रुपये" = 1000
 FRAC = {N("साढ़े"): 0.5, N("सवा"): 0.25, N("पौने"): -0.25}  # prefixes: साढ़े X = X + 0.5
 SPEC = {N("डेढ़"): 1.5, N("ढाई"): 2.5}
@@ -61,7 +62,8 @@ def load_tables(data_dir=DATA_DIR):
 
 
 def tokenize(text):
-    text = N(text).translate(DEV_DIGITS).replace("-", " ")   # "आठ-दस" -> "आठ दस"
+    text = N(text).translate(DEV_DIGITS)
+    text = re.sub(r"[-\"'“”‘’()\[\]{}]", " ", text)   # "आठ-दस" -> "आठ दस"; quotes/brackets are transparent
     return re.findall(r"[।॥,.?!…;:]|[^\s।॥,.?!…;:]+", text)
 
 
@@ -100,8 +102,11 @@ def read_run(toks, i):
 
 def read_amount(toks, i):
     """Read "[frac] number [सौ] [number] multiplier ..." left to right.
-    A multiplier that is not smaller than the previous one starts a new amount,
-    so "पाँच लाख पाँच करोड़" gives two amounts. Returns (amounts, end, big_mult_used)."""
+    After a number, a multiplier that is not smaller than the previous one starts a
+    new amount, so "पाँच लाख पाँच करोड़" gives two amounts. Directly after another
+    multiplier, a larger one scales the whole amount ("पाँच सौ करोड़" = 500 crore,
+    "एक हज़ार करोड़" = 1000 crore), and a repeated one is distributive ("सौ सौ रुपये"
+    = 100 each). Returns (amounts, end, big_mult_used)."""
     amounts, total, grp, frac = [], 0, 0, None
     last_mult, prev, big = None, None, False      # prev: kind of the previous token
     while i < len(toks):
@@ -119,10 +124,22 @@ def read_amount(toks, i):
                 break                               # two numbers in a row: not one amount
             grp += num(t) + (frac or 0)
             frac, prev = None, "num"
-        elif t in MULT and (prev == "num" or (prev is None and t in CAN_START)):
+        elif t in MULT and (prev in ("num", "frac", "mult") or (prev is None and t in CAN_START)):
             m = MULT[t]
+            if prev == "mult":
+                before = MULT[toks[i - 1]]
+                if m == before:                     # "सौ सौ", "हज़ार हज़ार": distributive
+                    i += 1
+                    continue
+                if m < before:
+                    break
+                total, grp, last_mult, big = (total + grp) * m, 0, m, True
+                i += 1
+                continue
             if prev is None:
                 grp = 1
+            elif prev == "frac":                    # "सवा लाख" = 1.25 lakh, "सवा सौ" = 125
+                grp, frac = 1 + frac, None
             if m == 100:
                 grp *= 100
             else:
@@ -144,7 +161,7 @@ def read_amount(toks, i):
 def as_time(v, minutes=None):
     h = int(v)
     m = minutes if minutes is not None else round((v - h) * 60)
-    return f"{h}:{m:02d}"
+    return f"{h or 12}:{m:02d}"                     # "पौने एक बजे" = 12:45
 
 
 def parse(text):
@@ -159,12 +176,21 @@ def parse(text):
             continue
         vals, j, forced = read_run(toks, i)
         nxt = toks[j] if j < len(toks) else None
+        run = toks[i:j]
+        if run and len(vals) < 4 and all(w in EN for w in run) and any(w in HOMOGRAPH for w in run):
+            i = j                                       # "वन विभाग", "पेमेंट टू", "वन टू वन मीटिंग"
+            continue
         if len(vals) >= 3 or (len(vals) >= 2 and forced):
             out.append(Entity("DIG", "".join(str(v) for v in vals), i, j))
             i = j
             continue
         if len(vals) == 2:
             a, b = vals
+            if a == b and nxt in MULT:                  # "दो दो सौ रुपये" = 200 each
+                amounts, j, _ = read_amount(toks, i + 1)
+                out += [Entity("AMT", v, i, j) for v in amounts]
+                i = j
+                continue
             if b > a:                                   # "दो तीन लाख", "आठ नौ लोग"
                 m = 1
                 if nxt in MULT:
